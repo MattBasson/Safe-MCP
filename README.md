@@ -43,7 +43,12 @@ model and disclosure policy.
 
 ## Quickstart
 
-Each server has its own README. For the first one:
+For the first server, follow the full
+[**build, run, and integrate guide**](./docs/INTEGRATION.md) -  it covers
+Podman build, one-time secret setup, and wiring into VS Code, GitHub
+Copilot Agent mode, Claude Code, and Claude Desktop.
+
+Each server also has a minimal per-server README:
 
 - [`servers/o365-graph-ts/README.md`](servers/o365-graph-ts/README.md)
 

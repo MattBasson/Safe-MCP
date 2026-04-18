@@ -14,8 +14,13 @@ Code, etc.) spawns over stdio.
 - **Secrets:** none baked into the image. The cache passphrase comes from a
   Podman secret; tokens are AES-256-GCM encrypted at rest.
 
-See the repo-level [enterprise deployment guide](../../docs/ENTERPRISE-DEPLOYMENT.md)
-and [token cache design](../../docs/TOKEN-CACHE.md).
+> 📖 **For full build + run + host-integration instructions (VS Code,
+> GitHub Copilot Agent mode, Claude Code, Claude Desktop), see
+> [`docs/INTEGRATION.md`](../../docs/INTEGRATION.md).**
+>
+> This file stays a quick reference. See also:
+> - [Enterprise deployment guide](../../docs/ENTERPRISE-DEPLOYMENT.md)
+> - [Token cache design](../../docs/TOKEN-CACHE.md)
 
 ## Tools
 
