@@ -1,0 +1,10 @@
+node_modules
+dist
+coverage
+test
+.vscode
+.idea
+*.log
+.env*
+README.md
+vitest.config.ts

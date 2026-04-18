@@ -1,0 +1,55 @@
+name: container
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    paths:
+      - "servers/**"
+      - ".github/workflows/container.yml"
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  o365-graph-ts:
+    name: Build & scan o365-graph-ts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+
+      - name: Build image
+        working-directory: servers/o365-graph-ts
+        run: |
+          podman build \
+            --format docker \
+            --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+            --label "org.opencontainers.image.revision=${{ github.sha }}" \
+            -t safe-mcp/o365-graph-ts:ci \
+            .
+
+      - name: Verify non-root user
+        run: |
+          USER_ID=$(podman image inspect safe-mcp/o365-graph-ts:ci \
+            --format '{{ .Config.User }}')
+          echo "Image USER = '$USER_ID'"
+          if [ "$USER_ID" = "" ] || [ "$USER_ID" = "0" ] || [ "$USER_ID" = "root" ]; then
+            echo "::error::Image must not run as root"
+            exit 1
+          fi
+
+      - name: Scan with Trivy (HIGH/CRITICAL fail)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: safe-mcp/o365-graph-ts:ci
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true

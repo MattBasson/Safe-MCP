@@ -1,0 +1,36 @@
+{
+  "name": "@safe-mcp/o365-graph-ts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Enterprise-safe Microsoft Graph MCP server (read-only, device-code auth, stdio).",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "o365-graph-mcp": "dist/index.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "lint": "tsc -p tsconfig.test.json",
+    "test": "vitest run",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@azure/msal-node": "^2.16.2",
+    "@microsoft/microsoft-graph-client": "^3.0.7",
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@microsoft/microsoft-graph-types": "^2.40.0",
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  }
+}

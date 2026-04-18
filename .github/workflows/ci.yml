@@ -1,0 +1,48 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  node:
+    name: TypeScript (lint + typecheck + test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r run typecheck
+      - run: pnpm -r run lint
+      - run: pnpm -r run test
+
+  no-secrets:
+    name: No baked-in secrets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Forbidden patterns in source
+        run: |
+          set -e
+          # Look for hardcoded credentials - an assignment or property whose
+          # value is a quoted, non-empty literal. Mentions of these keys in
+          # comments, redaction lists, or env-var names are fine.
+          if grep -RInE \
+              --exclude-dir=test \
+              --exclude-dir=node_modules \
+              --exclude-dir=dist \
+              '(client_secret|ClientSecret|PERSONAL_ACCESS_TOKEN|password|passphrase)[[:space:]]*[:=][[:space:]]*"[^"]+"' \
+              servers/ 2>/dev/null; then
+            echo "::error::Found a hardcoded secret-like assignment in servers/"
+            exit 1
+          fi

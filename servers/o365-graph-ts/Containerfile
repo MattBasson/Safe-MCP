@@ -1,0 +1,55 @@
+# syntax=docker/dockerfile:1.7
+#
+# Multi-stage build for an enterprise-safe MCP server.
+#  - Builder: full Node + toolchain to compile TypeScript and prune dev deps.
+#  - Runtime: distroless nodejs22 :nonroot tag (UID/GID 65532, no shell, no
+#    package manager). Application files are owned by root but world-readable
+#    so the non-root user can execute them; the only writable path the
+#    process needs is the bind-mounted cache dir.
+#
+
+############################
+# Stage 1 - build
+############################
+FROM docker.io/library/node:22-alpine AS build
+
+WORKDIR /build
+
+# Copy manifests first for better layer caching.
+COPY package.json ./
+COPY tsconfig.json ./
+
+# Install full deps (no lockfile copy: this image is built per-server, no
+# workspace hoisting needed inside the container).
+RUN --mount=type=cache,target=/root/.npm \
+    npm install --no-audit --no-fund --ignore-scripts
+
+# Copy sources and build.
+COPY src ./src
+RUN npx tsc -p tsconfig.json
+
+# Drop dev dependencies for the runtime stage.
+RUN npm prune --omit=dev --ignore-scripts
+
+############################
+# Stage 2 - runtime
+############################
+FROM gcr.io/distroless/nodejs22-debian12:nonroot
+
+ENV NODE_ENV=production \
+    MCP_CACHE_DIR=/home/nonroot/.cache/o365-graph-mcp
+
+WORKDIR /app
+
+COPY --from=build --chown=root:root /build/dist /app/dist
+COPY --from=build --chown=root:root /build/node_modules /app/node_modules
+COPY --from=build --chown=root:root /build/package.json /app/package.json
+
+USER 65532:65532
+
+LABEL org.opencontainers.image.title="safe-mcp/o365-graph-ts" \
+      org.opencontainers.image.description="Enterprise-safe Microsoft Graph MCP server (read-only, device-code auth, stdio)." \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.source="https://github.com/mattbasson/safe-mcp"
+
+ENTRYPOINT ["/nodejs/bin/node", "/app/dist/index.js"]
