@@ -5,7 +5,6 @@ import {
   PublicClientApplication,
   type AuthenticationResult,
   type Configuration,
-  type DeviceCodeResponse,
 } from "@azure/msal-node";
 import {
   EncryptedFileCachePlugin,
@@ -87,7 +86,7 @@ async function acquireByDeviceCode(
 
   const result = await ctx.pca.acquireTokenByDeviceCode({
     scopes: ctx.scopes,
-    deviceCodeCallback: (resp: DeviceCodeResponse) => {
+    deviceCodeCallback: (resp) => {
       // The instructions are intended for a human; emit them on stderr only.
       // stdout belongs to JSON-RPC.
       process.stderr.write(`\n${resp.message}\n\n`);
