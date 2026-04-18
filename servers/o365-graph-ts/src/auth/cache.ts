@@ -14,6 +14,9 @@ const SCRYPT_SALT = Buffer.from("safe-mcp/o365-graph-ts/v1", "utf8");
 const SCRYPT_N = 1 << 15;
 const SCRYPT_R = 8;
 const SCRYPT_P = 1;
+// Node's default scryptSync maxmem is 32 MiB, which is exactly what N=2^15,
+// r=8 needs - triggering RangeError on some runtimes. Bump it explicitly.
+const SCRYPT_MAXMEM = 64 * 1024 * 1024;
 const KEY_LEN = 32;
 const NONCE_LEN = 12;
 const TAG_LEN = 16;
@@ -37,7 +40,12 @@ export class EncryptedFileCachePlugin implements ICachePlugin {
         opts.passphrase,
         SCRYPT_SALT,
         KEY_LEN,
-        { N: SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P },
+        {
+          N: SCRYPT_N,
+          r: SCRYPT_R,
+          p: SCRYPT_P,
+          maxmem: SCRYPT_MAXMEM,
+        },
       );
     } else {
       this.key = null;
