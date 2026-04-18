@@ -27,12 +27,12 @@ jobs:
           sudo apt-get install -y podman
 
       - name: Build image
-        working-directory: servers/o365-graph-ts
         run: |
           podman build \
             --format docker \
             --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
             --label "org.opencontainers.image.revision=${{ github.sha }}" \
+            -f servers/o365-graph-ts/Containerfile \
             -t safe-mcp/o365-graph-ts:ci \
             .
 

@@ -1,11 +1,17 @@
 # syntax=docker/dockerfile:1.7
 #
 # Multi-stage build for an enterprise-safe MCP server.
-#  - Builder: full Node + toolchain to compile TypeScript and prune dev deps.
-#  - Runtime: distroless nodejs22 :nonroot tag (UID/GID 65532, no shell, no
-#    package manager). Application files are owned by root but world-readable
-#    so the non-root user can execute them; the only writable path the
-#    process needs is the bind-mounted cache dir.
+#
+# Build context: the REPO ROOT (not the server directory). The server's
+# tsconfig.json extends ../../tsconfig.base.json, so the builder needs to
+# see both. Build it with:
+#
+#   podman build -t safe-mcp/o365-graph-ts:dev \
+#       -f servers/o365-graph-ts/Containerfile .
+#
+# Runtime image: distroless nodejs22 :nonroot tag (UID/GID 65532, no shell,
+# no package manager). The only writable path the process needs is the
+# bind-mounted cache dir.
 #
 
 ############################
@@ -15,20 +21,25 @@ FROM docker.io/library/node:22-alpine AS build
 
 WORKDIR /build
 
-# Copy manifests first for better layer caching.
-COPY package.json ./
-COPY tsconfig.json ./
+# Copy the shared base config first (referenced by the server's
+# tsconfig.json via `extends`).
+COPY tsconfig.base.json ./tsconfig.base.json
 
-# Install full deps (no lockfile copy: this image is built per-server, no
-# workspace hoisting needed inside the container).
+# Copy the server's manifests so we can cache `npm install` ahead of the
+# source copy.
+COPY servers/o365-graph-ts/package.json ./servers/o365-graph-ts/package.json
+COPY servers/o365-graph-ts/tsconfig.json ./servers/o365-graph-ts/tsconfig.json
+
+WORKDIR /build/servers/o365-graph-ts
+
 RUN --mount=type=cache,target=/root/.npm \
     npm install --no-audit --no-fund --ignore-scripts
 
-# Copy sources and build.
-COPY src ./src
+# Now copy the sources and build.
+COPY servers/o365-graph-ts/src ./src
 RUN npx tsc -p tsconfig.json
 
-# Drop dev dependencies for the runtime stage.
+# Drop dev dependencies so only runtime deps survive into the final image.
 RUN npm prune --omit=dev --ignore-scripts
 
 ############################
@@ -41,9 +52,9 @@ ENV NODE_ENV=production \
 
 WORKDIR /app
 
-COPY --from=build --chown=root:root /build/dist /app/dist
-COPY --from=build --chown=root:root /build/node_modules /app/node_modules
-COPY --from=build --chown=root:root /build/package.json /app/package.json
+COPY --from=build --chown=root:root /build/servers/o365-graph-ts/dist /app/dist
+COPY --from=build --chown=root:root /build/servers/o365-graph-ts/node_modules /app/node_modules
+COPY --from=build --chown=root:root /build/servers/o365-graph-ts/package.json /app/package.json
 
 USER 65532:65532
 

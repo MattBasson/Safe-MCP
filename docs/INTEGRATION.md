@@ -56,7 +56,8 @@ server runs memory-only.)
 
 ```bash
 cd safe-mcp
-podman build -t safe-mcp/o365-graph-ts:dev servers/o365-graph-ts
+podman build -t safe-mcp/o365-graph-ts:dev \
+  -f servers/o365-graph-ts/Containerfile .
 ```
 
 Quick sanity checks:

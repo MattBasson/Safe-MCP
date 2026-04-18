@@ -47,7 +47,8 @@ pnpm install
 pnpm --filter @safe-mcp/o365-graph-ts build
 
 # build the container
-podman build -t safe-mcp/o365-graph-ts:dev servers/o365-graph-ts
+podman build -t safe-mcp/o365-graph-ts:dev \
+  -f servers/o365-graph-ts/Containerfile .
 ```
 
 Generate a per-user cache passphrase **once** and store it as a Podman
