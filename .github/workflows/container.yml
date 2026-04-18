@@ -47,7 +47,7 @@ jobs:
           fi
 
       - name: Scan with Trivy (HIGH/CRITICAL fail)
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@0.35.0
         with:
           image-ref: safe-mcp/o365-graph-ts:ci
           severity: HIGH,CRITICAL
