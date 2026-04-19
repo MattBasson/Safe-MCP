@@ -46,10 +46,44 @@ jobs:
             exit 1
           fi
 
-      - name: Scan with Trivy (HIGH/CRITICAL fail)
+      - name: Trivy advisory scan (always reports, never fails)
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: safe-mcp/o365-graph-ts:ci
+          severity: LOW,MEDIUM,HIGH,CRITICAL
+          exit-code: "0"
+          ignore-unfixed: false
+          format: table
+          output: trivy-advisory.txt
+
+      - name: Publish advisory scan to job summary
+        if: always()
+        run: |
+          {
+            echo "## Trivy advisory scan (all severities, including unfixed)"
+            echo
+            echo '```'
+            if [ -s trivy-advisory.txt ]; then
+              cat trivy-advisory.txt
+            else
+              echo "(no findings)"
+            fi
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Trivy report artefact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-advisory-${{ github.sha }}
+          path: trivy-advisory.txt
+          if-no-files-found: ignore
+
+      - name: Scan with Trivy (HIGH/CRITICAL fail, fixable only)
         uses: aquasecurity/trivy-action@0.35.0
         with:
           image-ref: safe-mcp/o365-graph-ts:ci
           severity: HIGH,CRITICAL
           exit-code: "1"
           ignore-unfixed: true
+          trivyignores: .trivyignore

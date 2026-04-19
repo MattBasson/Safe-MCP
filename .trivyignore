@@ -1,0 +1,11 @@
+# Trivy ignore list for safe-mcp container images.
+#
+# Only add entries here with a written justification: a link to the upstream
+# advisory, why the finding does not apply to our runtime, and (if possible)
+# an expiry date by which we expect a fix. Unjustified entries are subject to
+# removal during review.
+#
+# Format: one CVE-ID per line. Optional inline comment after a `#`.
+#
+# Example:
+#   CVE-2024-00000  # not reachable - the vulnerable function is dead code in our build; expires 2026-06-30
