@@ -47,10 +47,17 @@ jobs:
             exit 1
           fi
 
+      - name: Export image to OCI tar for Trivy
+        run: |
+          podman save --format docker-archive \
+            -o image.tar safe-mcp/o365-graph-ts:ci
+          ls -lh image.tar
+
       - name: Trivy advisory scan (always reports, never fails)
+        continue-on-error: true
         uses: aquasecurity/trivy-action@0.35.0
         with:
-          image-ref: safe-mcp/o365-graph-ts:ci
+          input: image.tar
           severity: LOW,MEDIUM,HIGH,CRITICAL
           exit-code: "0"
           ignore-unfixed: false
@@ -104,7 +111,7 @@ jobs:
       - name: Scan with Trivy (HIGH/CRITICAL fail, fixable only)
         uses: aquasecurity/trivy-action@0.35.0
         with:
-          image-ref: safe-mcp/o365-graph-ts:ci
+          input: image.tar
           severity: HIGH,CRITICAL
           exit-code: "1"
           ignore-unfixed: true
