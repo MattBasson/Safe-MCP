@@ -30,6 +30,7 @@ jobs:
       - name: Build image
         run: |
           podman build \
+            --pull=always \
             --format docker \
             --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
             --label "org.opencontainers.image.revision=${{ github.sha }}" \
