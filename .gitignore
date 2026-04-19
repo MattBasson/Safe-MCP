@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Test / coverage
+coverage/
+.nyc_output/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Editors
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Local env / secrets - never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+secrets/
+token-cache.bin
+pending-device-code.json
+
+# OS
+Thumbs.db
+
+# .NET (for future servers)
+bin/
+obj/
+*.user

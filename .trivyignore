@@ -1,0 +1,15 @@
+# Trivy ignore list for safe-mcp container images.
+#
+# Only add entries here with a written justification: a link to the upstream
+# advisory, why the finding does not apply to our runtime, and an expiry date
+# by which we expect a fix. Unjustified or expired entries are removed during
+# review.
+#
+# Format: one CVE-ID per line. Optional inline comment after a `#`.
+
+# libssl3 3.0.18-1~deb12u2 -> fixed in 3.0.19-1~deb12u2.
+# Inherited from the distroless base image (gcr.io/distroless/nodejs22-debian12:nonroot),
+# which has not yet picked up the patched Debian point release. Re-scan and
+# drop this waiver as soon as the upstream image refreshes; expires 2026-06-30.
+# https://avd.aquasec.com/nvd/cve-2026-28390
+CVE-2026-28390

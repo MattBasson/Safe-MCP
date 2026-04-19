@@ -1,0 +1,119 @@
+name: container
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    paths:
+      - "servers/**"
+      - ".github/workflows/container.yml"
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+  pull-requests: write
+
+jobs:
+  o365-graph-ts:
+    name: Build & scan o365-graph-ts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+
+      - name: Build image
+        run: |
+          podman build \
+            --pull=always \
+            --format docker \
+            --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+            --label "org.opencontainers.image.revision=${{ github.sha }}" \
+            -f servers/o365-graph-ts/Containerfile \
+            -t safe-mcp/o365-graph-ts:ci \
+            .
+
+      - name: Verify non-root user
+        run: |
+          USER_ID=$(podman image inspect safe-mcp/o365-graph-ts:ci \
+            --format '{{ .Config.User }}')
+          echo "Image USER = '$USER_ID'"
+          if [ "$USER_ID" = "" ] || [ "$USER_ID" = "0" ] || [ "$USER_ID" = "root" ]; then
+            echo "::error::Image must not run as root"
+            exit 1
+          fi
+
+      - name: Export image to OCI tar for Trivy
+        run: |
+          podman save --format docker-archive \
+            -o image.tar safe-mcp/o365-graph-ts:ci
+          ls -lh image.tar
+
+      - name: Trivy advisory scan (always reports, never fails)
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          input: image.tar
+          severity: LOW,MEDIUM,HIGH,CRITICAL
+          exit-code: "0"
+          ignore-unfixed: false
+          format: table
+          output: trivy-advisory.txt
+
+      - name: Publish advisory scan to job summary
+        if: always()
+        run: |
+          {
+            echo "## Trivy advisory scan (all severities, including unfixed)"
+            echo
+            echo '```'
+            if [ -s trivy-advisory.txt ]; then
+              cat trivy-advisory.txt
+            else
+              echo "(no findings)"
+            fi
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Trivy report artefact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-advisory-${{ github.sha }}
+          path: trivy-advisory.txt
+          if-no-files-found: ignore
+
+      - name: Post Trivy findings as PR comment
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let body = '### Trivy advisory scan (container)\n\n';
+            try {
+              const txt = fs.readFileSync('trivy-advisory.txt', 'utf8');
+              const trimmed = txt.length > 60000 ? txt.slice(0, 60000) + '\n… (truncated)\n' : txt;
+              body += '```\n' + (trimmed.trim() || '(no findings)') + '\n```\n';
+            } catch (e) {
+              body += '_Scan did not produce a report file._\n';
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+
+      - name: Scan with Trivy (HIGH/CRITICAL fail, fixable only)
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          input: image.tar
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+          trivyignores: .trivyignore

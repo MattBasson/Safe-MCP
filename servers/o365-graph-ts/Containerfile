@@ -1,0 +1,66 @@
+# syntax=docker/dockerfile:1.7
+#
+# Multi-stage build for an enterprise-safe MCP server.
+#
+# Build context: the REPO ROOT (not the server directory). The server's
+# tsconfig.json extends ../../tsconfig.base.json, so the builder needs to
+# see both. Build it with:
+#
+#   podman build -t safe-mcp/o365-graph-ts:dev \
+#       -f servers/o365-graph-ts/Containerfile .
+#
+# Runtime image: distroless nodejs22 :nonroot tag (UID/GID 65532, no shell,
+# no package manager). The only writable path the process needs is the
+# bind-mounted cache dir.
+#
+
+############################
+# Stage 1 - build
+############################
+FROM docker.io/library/node:22-alpine AS build
+
+WORKDIR /build
+
+# Copy the shared base config first (referenced by the server's
+# tsconfig.json via `extends`).
+COPY tsconfig.base.json ./tsconfig.base.json
+
+# Copy the server's manifests so we can cache `npm install` ahead of the
+# source copy.
+COPY servers/o365-graph-ts/package.json ./servers/o365-graph-ts/package.json
+COPY servers/o365-graph-ts/tsconfig.json ./servers/o365-graph-ts/tsconfig.json
+
+WORKDIR /build/servers/o365-graph-ts
+
+RUN --mount=type=cache,target=/root/.npm \
+    npm install --no-audit --no-fund --ignore-scripts
+
+# Now copy the sources and build.
+COPY servers/o365-graph-ts/src ./src
+RUN npx tsc -p tsconfig.json
+
+# Drop dev dependencies so only runtime deps survive into the final image.
+RUN npm prune --omit=dev --ignore-scripts
+
+############################
+# Stage 2 - runtime
+############################
+FROM gcr.io/distroless/nodejs22-debian12:nonroot
+
+ENV NODE_ENV=production \
+    MCP_CACHE_DIR=/home/nonroot/.cache/o365-graph-mcp
+
+WORKDIR /app
+
+COPY --from=build --chown=root:root /build/servers/o365-graph-ts/dist /app/dist
+COPY --from=build --chown=root:root /build/servers/o365-graph-ts/node_modules /app/node_modules
+COPY --from=build --chown=root:root /build/servers/o365-graph-ts/package.json /app/package.json
+
+USER 65532:65532
+
+LABEL org.opencontainers.image.title="safe-mcp/o365-graph-ts" \
+      org.opencontainers.image.description="Enterprise-safe Microsoft Graph MCP server (read-only, device-code auth, stdio)." \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.source="https://github.com/mattbasson/safe-mcp"
+
+ENTRYPOINT ["/nodejs/bin/node", "/app/dist/index.js"]

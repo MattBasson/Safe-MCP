@@ -1,0 +1,56 @@
+# Build context is the repo root; trim everything the Containerfile does
+# not actually COPY to keep uploads small and avoid leaking local state.
+
+# Version control
+.git
+.github
+.gitignore
+.gitattributes
+
+# Editors
+.vscode
+.idea
+.editorconfig
+*.swp
+.DS_Store
+
+# Local env / secrets - never send to the daemon
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+secrets/
+token-cache.bin
+pending-device-code.json
+
+# Workspace artefacts from ANY server
+**/node_modules
+**/dist
+**/build
+**/coverage
+**/.nyc_output
+*.tsbuildinfo
+
+# Tests (not needed for the runtime image)
+**/test
+
+# Docs / top-level files not consumed by the build
+docs
+README.md
+SECURITY.md
+CONTRIBUTING.md
+LICENSE
+pnpm-lock.yaml
+pnpm-workspace.yaml
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# .NET (for future servers)
+**/bin
+**/obj
+**/*.user
